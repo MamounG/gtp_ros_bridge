@@ -92,7 +92,6 @@ public:
 
   ~GtpRosBridge(void)
   {
-     delete traj_client_;
   }
 
   void executeCB(const gtp_ros_msg::requestGoalConstPtr &goal)
