@@ -318,7 +318,7 @@ public:
         
         reader.parse(res, root, false);
         
-        ROS_INFO(root.toStyledString().c_str());
+        ROS_INFO("root = \n%s",root.toStyledString().c_str());
         
         pr2_controllers_msgs::JointTrajectoryGoal goal;
         
@@ -607,7 +607,10 @@ void updateObjectPosesCB(const toaster_msgs::ObjectListStamped::ConstPtr& msg)
       conf.append(msg->objectList[i].meEntity.pose.position.y);
       conf.append(msg->objectList[i].meEntity.pose.position.z);
       
-      tf::Quaternion q(msg->objectList[i].meEntity.pose.orientation.x, msg->objectList[i].meEntity.pose.orientation.y, msg->objectList[i].meEntity.pose.orientation.z, msg->objectList[i].meEntity.pose.orientation.w);
+      tf::Quaternion q(msg->objectList[i].meEntity.pose.orientation.x,
+                       msg->objectList[i].meEntity.pose.orientation.y,
+                       msg->objectList[i].meEntity.pose.orientation.z,
+                       msg->objectList[i].meEntity.pose.orientation.w);
       tf::Matrix3x3 m(q);      
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);
@@ -649,7 +652,10 @@ void updateRobotPosesCB(const toaster_msgs::RobotListStamped::ConstPtr& msg)
       conf.append(msg->robotList[i].meAgent.meEntity.pose.position.y);
       conf.append(0);
       
-      tf::Quaternion q(msg->robotList[i].meAgent.meEntity.pose.orientation.x, msg->robotList[i].meAgent.meEntity.pose.orientation.y, msg->robotList[i].meAgent.meEntity.pose.orientation.z, msg->robotList[i].meAgent.meEntity.pose.orientation.w);
+      tf::Quaternion q(msg->robotList[i].meAgent.meEntity.pose.orientation.x,
+                       msg->robotList[i].meAgent.meEntity.pose.orientation.y,
+                       msg->robotList[i].meAgent.meEntity.pose.orientation.z,
+                       msg->robotList[i].meAgent.meEntity.pose.orientation.w);
       tf::Matrix3x3 m(q);      
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);
@@ -726,7 +732,10 @@ void updateHumanPosesCB(const toaster_msgs::HumanListStamped::ConstPtr& msg)
          poseConf.append(msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.position.y);
          poseConf.append(msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.position.z);
          
-         tf::Quaternion q(msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.x, msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.y, msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.z, msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.w);
+         tf::Quaternion q(msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.x,
+                          msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.y,
+                          msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.z,
+                          msg->humanList.at(i).meAgent.skeletonJoint.at(j).meEntity.pose.orientation.w);
          tf::Matrix3x3 m(q);      
          double roll, pitch, yaw;
          m.getRPY(roll, pitch, yaw);
