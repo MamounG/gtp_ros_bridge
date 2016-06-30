@@ -30,7 +30,6 @@ bool updateHumanList = false;
 std::map<std::string,std::string> jointCorrespondances;
 
 
-typedef actionlib::SimpleActionClient< pr2_controllers_msgs::JointTrajectoryAction > TrajClient;
 
 class GtpRosBridge
 {
@@ -43,8 +42,7 @@ protected:
   // create messages that are used to published feedback/result
   gtp_ros_msg::requestFeedback feedback_;
   gtp_ros_msg::requestResult result_;
-  
-  TrajClient* traj_client_;
+
   
 
   
@@ -78,15 +76,6 @@ public:
         jointCorrespondances["l_wrist_roll_link"] = "left-Arm7";
         jointCorrespondances["l_gripper_link"] = "fingerJointGripper_1";
         
-        
-        // tell the action client that we want to spin a thread by default
-        traj_client_ = new TrajClient("r_arm_controller/joint_trajectory_action", true);
-
-        // wait for action server to come up
-        while(!traj_client_->waitForServer(ros::Duration(5.0))){
-          ROS_INFO("Waiting for the joint_trajectory_action server");
-        }
-       
   
         as_.start();
   }
@@ -295,91 +284,6 @@ public:
         as_.setSucceeded(result_);
         
     }
-    else if (goal->req.requestType == "loadAndExecute")
-    {
-        ROS_INFO("Load and execute!!");
-        
-        Json::Value request(Json::objectValue);
-        Json::Value input(Json::objectValue);
-        
-        input["taskId"] = (int)goal->req.loadAction.actionId;
-        input["alternativeId"] = (int)goal->req.loadAction.alternativeId;
-        input["subTrajId"] = (int)goal->req.loadAction.alternativeId;
-        request["GetGTPTraj"] = input;
-        
-        
-        client.sendMessage("move3d", wrt.write(request));
-        std::string res = client.getBlockingMessage().second;
-        //ROS_INFO("planner answer: %s", res.c_str());
-        
-        
-        Json::Value root, nullval;
-        Json::Reader reader;
-        
-        reader.parse(res, root, false);
-        
-        ROS_INFO("root = \n%s",root.toStyledString().c_str());
-        
-        pr2_controllers_msgs::JointTrajectoryGoal goal;
-        
-        int armId = 0;// = root["GetGTPTraj"]["armId"].asInt();
-        
-        
-        for (unsigned int i = 0; i < root["GetGTPTraj"]["confs"].size(); i++)
-        {
-            trajectory_msgs::JointTrajectoryPoint Jtpt;
-            
-            
-            int ind = 0;
-            goal.trajectory.points[i].positions.resize(7);
-            goal.trajectory.points[i].positions[0] = root["GetGTPTraj"]["confs"][i][16].asDouble();
-            goal.trajectory.points[i].positions[1] = root["GetGTPTraj"]["confs"][i][17].asDouble();
-            goal.trajectory.points[i].positions[2] = root["GetGTPTraj"]["confs"][i][18].asDouble();
-            goal.trajectory.points[i].positions[3] = root["GetGTPTraj"]["confs"][i][19].asDouble();
-            goal.trajectory.points[i].positions[4] = root["GetGTPTraj"]["confs"][i][20].asDouble();
-            goal.trajectory.points[i].positions[5] = root["GetGTPTraj"]["confs"][i][21].asDouble();
-            goal.trajectory.points[i].positions[6] = root["GetGTPTraj"]["confs"][i][22].asDouble();
-            // Velocities
-            goal.trajectory.points[ind].velocities.resize(7);
-            for (size_t j = 0; j < 7; ++j)
-            {
-              goal.trajectory.points[i].velocities[j] = 0.0;
-            }
-            // To be reached 1 second after starting along the trajectory
-            goal.trajectory.points[ind].time_from_start = ros::Duration((double)i+1);
-   
-        }
-        
-        if (armId == 0)
-        {
-            goal.trajectory.joint_names.push_back("r_shoulder_pan_joint");
-            goal.trajectory.joint_names.push_back("r_shoulder_lift_joint");
-            goal.trajectory.joint_names.push_back("r_upper_arm_roll_joint");
-            goal.trajectory.joint_names.push_back("r_elbow_flex_joint");
-            goal.trajectory.joint_names.push_back("r_forearm_roll_joint");
-            goal.trajectory.joint_names.push_back("r_wrist_flex_joint");
-            goal.trajectory.joint_names.push_back("r_wrist_roll_joint");
-        }
-        else if (armId == 1)
-        {
-            goal.trajectory.joint_names.push_back("l_shoulder_pan_joint");
-            goal.trajectory.joint_names.push_back("l_shoulder_lift_joint");
-            goal.trajectory.joint_names.push_back("l_upper_arm_roll_joint");
-            goal.trajectory.joint_names.push_back("l_elbow_flex_joint");
-            goal.trajectory.joint_names.push_back("l_forearm_roll_joint");
-            goal.trajectory.joint_names.push_back("l_wrist_flex_joint");
-            goal.trajectory.joint_names.push_back("l_wrist_roll_joint");
-        }
-            
-        
-                
-        startTrajectory(goal);
-        
-        //startTrajectory(armExtensionTrajectory());
-        
-        result_.ans.success = true;
-        as_.setSucceeded(result_);
-    }
     else if (goal->req.requestType == "load")
     {
         Json::Value request(Json::objectValue);
@@ -507,88 +411,6 @@ public:
     }
         
   }
-  
-  
-  
-
-//! Sends the command to start a given trajectory
-  void startTrajectory(pr2_controllers_msgs::JointTrajectoryGoal goal)
-  {
-    // When to start the trajectory: 1s from now
-    goal.trajectory.header.stamp = ros::Time::now() + ros::Duration(0.1);
-    traj_client_->sendGoal(goal);
-  }
-
-  //! Generates a simple trajectory with two waypoints, used as an example
-  /*! Note that this trajectory contains two waypoints, joined together
-      as a single trajectory. Alternatively, each of these waypoints could
-      be in its own trajectory - a trajectory can have one or more waypoints
-      depending on the desired application.
-  */
-  pr2_controllers_msgs::JointTrajectoryGoal armExtensionTrajectory()
-  {
-    //our goal variable
-    pr2_controllers_msgs::JointTrajectoryGoal goal;
-
-    // First, the joint names, which apply to all waypoints
-    goal.trajectory.joint_names.push_back("r_shoulder_pan_joint");
-    goal.trajectory.joint_names.push_back("r_shoulder_lift_joint");
-    goal.trajectory.joint_names.push_back("r_upper_arm_roll_joint");
-    goal.trajectory.joint_names.push_back("r_elbow_flex_joint");
-    goal.trajectory.joint_names.push_back("r_forearm_roll_joint");
-    goal.trajectory.joint_names.push_back("r_wrist_flex_joint");
-    goal.trajectory.joint_names.push_back("r_wrist_roll_joint");
-
-    // We will have two waypoints in this goal trajectory
-    goal.trajectory.points.resize(2);
-
-    // First trajectory point
-    // Positions
-    int ind = 0;
-    goal.trajectory.points[ind].positions.resize(7);
-    goal.trajectory.points[ind].positions[0] = 0.0;
-    goal.trajectory.points[ind].positions[1] = 0.0;
-    goal.trajectory.points[ind].positions[2] = 0.0;
-    goal.trajectory.points[ind].positions[3] = 0.0;
-    goal.trajectory.points[ind].positions[4] = 0.0;
-    goal.trajectory.points[ind].positions[5] = 0.0;
-    goal.trajectory.points[ind].positions[6] = 0.0;
-    // Velocities
-    goal.trajectory.points[ind].velocities.resize(7);
-    for (size_t j = 0; j < 7; ++j)
-    {
-      goal.trajectory.points[ind].velocities[j] = 0.0;
-    }
-    // To be reached 1 second after starting along the trajectory
-    goal.trajectory.points[ind].time_from_start = ros::Duration(1.0);
-
-    // Second trajectory point
-    // Positions
-    ind += 1;
-    goal.trajectory.points[ind].positions.resize(7);
-    goal.trajectory.points[ind].positions[0] = -0.3;
-    goal.trajectory.points[ind].positions[1] = 0.2;
-    goal.trajectory.points[ind].positions[2] = -0.1;
-    goal.trajectory.points[ind].positions[3] = -1.2;
-    goal.trajectory.points[ind].positions[4] = 1.5;
-    goal.trajectory.points[ind].positions[5] = -0.3;
-    goal.trajectory.points[ind].positions[6] = 0.5;
-    // Velocities
-    goal.trajectory.points[ind].velocities.resize(7);
-    for (size_t j = 0; j < 7; ++j)
-    {
-      goal.trajectory.points[ind].velocities[j] = 0.0;
-    }
-    // To be reached 2 seconds after starting along the trajectory
-    goal.trajectory.points[ind].time_from_start = ros::Duration(2.0);
-
-    //we are done; return the goal
-    return goal;
-  }
-
-
-
-
 };
 
 
