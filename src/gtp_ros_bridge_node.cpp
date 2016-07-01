@@ -299,7 +299,7 @@ public:
         //ROS_INFO("planner answer: %s", res.c_str());
         
         
-        Json::Value root, nullval;
+        Json::Value root;
         Json::Reader reader;
         
         reader.parse(res, root, false);
@@ -400,6 +400,60 @@ public:
        result_.ans.success = true;
        as_.setSucceeded(result_);
        ROS_INFO("Done updating");
+    }
+    else if (goal->req.requestType == "addAttachemnt")
+    {
+        Json::Value request(Json::objectValue);
+        Json::Value input(Json::objectValue);
+
+        input["taskId"] = (int)goal->req.loadAction.actionId;
+        input["alternativeId"] = (int)goal->req.loadAction.alternativeId;
+
+        request["SetGTPAttachementFromTask"] = input;
+
+        client.sendMessage("move3d", wrt.write(request));
+        std::string res = client.getBlockingMessage().second;
+
+        Json::Value root;
+        Json::Reader reader;
+
+        reader.parse(res, root, false);
+        if (root["SetGTPAttachementFromTask"]["status"].asString() == "OK")
+        {
+            ROS_INFO("Attachment added successfully");
+        }
+        else
+        {
+            ROS_INFO("Failed to add attachment");
+        }
+        result_.ans.success = true;
+        as_.setSucceeded(result_);
+    }
+    else if (goal->req.requestType == "removeAttachment")
+    {
+        Json::Value request(Json::objectValue);
+        Json::Value input(Json::objectValue);
+
+
+        request["ClearAllAttachements"] = input;
+
+        client.sendMessage("move3d", wrt.write(request));
+        std::string res = client.getBlockingMessage().second;
+
+        Json::Value root;
+        Json::Reader reader;
+
+        reader.parse(res, root, false);
+        if (root["ClearAllAttachements"]["status"].asString() == "OK")
+        {
+            ROS_INFO("Attachment removed successfully");
+        }
+        else
+        {
+            ROS_INFO("Failed to remove attachment");
+        }
+        result_.ans.success = true;
+        as_.setSucceeded(result_);
     }
     else
     {

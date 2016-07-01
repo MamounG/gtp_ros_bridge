@@ -56,6 +56,7 @@ int main (int argc, char **argv)
   gtp_ros_msg::requestGoal goal;
   
   std::string requesttype = root.get("requestType", "Null" ).asString();
+  cout << root.get("requestType", "Null" ).asString() << endl;
   if (requesttype == "Null")
   {
     cout << "no requestType" << endl;
@@ -199,14 +200,14 @@ int main (int argc, char **argv)
       int actionId = root.get("actionId", -1 ).asInt();
       if (actionId == -1)
       {
-        cout << "no actionId" << endl;
+        cout << "no actionId 1" << endl;
         return 0;
       }
       
       int altId = root.get("altId", -1 ).asInt();
       if (altId == -1)
       {
-        cout << "no actionId" << endl;
+        cout << "no actionId 2" << endl;
         return 0;
       }
       
@@ -240,19 +241,19 @@ int main (int argc, char **argv)
       return 0;
       
   }
-  else if (requesttype == "load" || "loadAndExecute")
+  else if (requesttype == "load" || requesttype ==  "loadAndExecute")
   {
       int actionId = root.get("actionId", -1 ).asInt();
       if (actionId == -1)
       {
-        cout << "no actionId" << endl;
+        cout << "no actionId 3" << endl;
         return 0;
       }
       
       int altId = root.get("altId", -1 ).asInt();
       if (altId == -1)
       {
-        cout << "no actionId" << endl;
+        cout << "no actionId 4" << endl;
         return 0;
       }
       
@@ -268,11 +269,37 @@ int main (int argc, char **argv)
       goal.req.loadSubTraj = subTrajId;
       
       ac.sendGoal(goal);
-  
-  
+  }
+  else if (requesttype == "addAttachemnt")
+  {
+      int actionId = root.get("actionId", -1 ).asInt();
+      if (actionId == -1)
+      {
+        cout << "no actionId 3" << endl;
+        return 0;
+      }
+
+      int altId = root.get("altId", -1 ).asInt();
+      if (altId == -1)
+      {
+        cout << "no actionId 4" << endl;
+        return 0;
+      }
+
+
+      goal.req.loadAction.actionId = actionId;
+      goal.req.loadAction.alternativeId = altId;
+
+      ac.sendGoal(goal);
+  }
+  else if (requesttype == "removeAttachment")
+  {
+      cout << "sending the goal" << endl;
+      ac.sendGoal(goal);
   }
   else if (requesttype == "update")
   {
+      cout << "sending the goal" << endl;
       ac.sendGoal(goal);
   }
   else if (requesttype == "test")
