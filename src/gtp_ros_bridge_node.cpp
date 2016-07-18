@@ -278,6 +278,7 @@ public:
             subMsg.armId = subTraj["armId"].asInt();
             subMsg.subTrajId = subTraj["subTrajId"].asInt();
             subMsg.subTrajName = subTraj["subTrajName"].asString();
+            subMsg.subTrajType = subTraj["subTrajType"].asString();
             result_.ans.subTrajs.push_back(subMsg);
         }
         result_.ans.success = true;
