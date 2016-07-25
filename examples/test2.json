@@ -1,6 +1,6 @@
 {
     "requestType":"planning",
-    "actionType":"place",
+    "actionType":"placeReachable",
     "input":
     {
         "agents":
@@ -9,6 +9,11 @@
             {
                 "key":"mainAgent",
                 "value":"PR2_ROBOT"
+            },
+            "agent2":
+            {
+                "key":"targetAgent",
+                "value":"HERAKLES_HUMAN1"
             }
         },
         "objects":
@@ -16,16 +21,16 @@
             "object1":
             {
                 "key":"mainObject",
-                "value":"RED_CUBE"
+                "value":"GREY_TAPE"
             },
             "object2":
             {
                 "key":"supportObject",
-                "value":"MANIP_TABLE"
+                "value":"TABLE_4"
             }
         }
     },
-    "previousId":0,
+    "previousId":3,
     "previousAltId":0
     
 }
