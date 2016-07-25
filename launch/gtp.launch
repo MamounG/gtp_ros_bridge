@@ -1,0 +1,5 @@
+<launch>
+        <rosparam command="load" file="$(find gtp_ros_bridge)/parameters/gtp.yaml" />
+
+        <node name="gtp_ros_bridge" pkg="gtp_ros_bridge" type="gtp_ros_bridge_node" output="screen" />  <!-- Launch the action_tester node -->
+</launch>

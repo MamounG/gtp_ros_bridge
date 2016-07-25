@@ -6,6 +6,7 @@
 
 #include <string>
 #include <iostream>
+#include <ctime>
 
 #include "std_msgs/String.h"
 #include <gtp_ros_msg/GTPTraj.h>
@@ -380,27 +381,36 @@ public:
     }
     else if (goal->req.requestType == "update")
     {
+        std::clock_t begin = std::clock();
+
+
+       int t;
+       nh_.getParam("/waitUpdate", t);
+//       ROS_INFO("t = %d", t);
        updateObjectList = true;
        while (updateObjectList)
        {
-         usleep(500000);
+         usleep(t);
          ROS_INFO("Waiting for objects updates");
        }
        updateRobotList = true;
        while (updateRobotList)
        {
-         usleep(500000);
+         usleep(t);
          ROS_INFO("Waiting for robots updates");
        }
        updateHumanList = true;
        while (updateHumanList)
        {
-         usleep(500000);
+         usleep(t);
          ROS_INFO("Waiting for humans updates");
        }
        result_.ans.success = true;
        as_.setSucceeded(result_);
-       ROS_INFO("Done updating");
+
+       std::clock_t endf = std::clock();
+
+       ROS_INFO("Done updating in %f", (double)(endf-begin)/CLOCKS_PER_SEC);
     }
     else if (goal->req.requestType == "addAttachemnt")
     {
