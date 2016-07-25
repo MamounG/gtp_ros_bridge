@@ -65,7 +65,7 @@ int main (int argc, char **argv)
   
   goal.req.requestType = requesttype;
   
-  if (requesttype == "planning")
+  if (requesttype == "planning" || requesttype == "updateAndPlan")
   {
   
       std::string type = root.get("actionType", "Null" ).asString();
@@ -182,6 +182,10 @@ int main (int argc, char **argv)
         {  
             ROS_INFO("Action computed with success");
             ROS_INFO("id = %lu, altId = %lu", ac.getResult()->ans.identifier.actionId, ac.getResult()->ans.identifier.alternativeId);
+            if (requesttype == "updateAndPlan")
+            {
+                ROS_INFO("nb subtrajs = %lu", ac.getResult()->ans.subTrajs.size());
+            }
         }
         else
         {

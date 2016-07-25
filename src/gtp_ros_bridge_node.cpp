@@ -85,206 +85,248 @@ public:
   {
   }
 
+
+  bool plan(const gtp_ros_msg::requestGoalConstPtr &goal, int& taskId, int& altId)
+  {
+      Json::FastWriter wrt;
+      client.sendMessage("move3d", "{\"ClearGTPInputs\":null}");
+      std::cout << client.getBlockingMessage().second << std::endl;
+
+
+      //_result = wrt.write(res);
+
+
+      for (unsigned int i = 0; i< goal->req.involvedAgents.size(); i++)
+      {
+         Json::Value request(Json::objectValue);
+         Json::Value input(Json::objectValue);
+
+         input["key"] = goal->req.involvedAgents.at(i).actionKey;
+         input["value"] = goal->req.involvedAgents.at(i).agentName;
+         request["AddGTPAgent"] = input;
+
+         client.sendMessage("move3d", wrt.write(request));
+         ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
+      }
+
+      for (unsigned int i = 0; i< goal->req.involvedObjects.size(); i++)
+      {
+         Json::Value request(Json::objectValue);
+         Json::Value input(Json::objectValue);
+
+         input["key"] = goal->req.involvedObjects.at(i).actionKey;
+         input["value"] = goal->req.involvedObjects.at(i).objectName;
+         request["AddGTPObject"] = input;
+
+         client.sendMessage("move3d", wrt.write(request));
+         ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
+      }
+
+      for (unsigned int i = 0; i< goal->req.data.size(); i++)
+      {
+         Json::Value request(Json::objectValue);
+         Json::Value input(Json::objectValue);
+
+         input["key"] = goal->req.data.at(i).dataKey;
+         input["value"] = goal->req.data.at(i).dataValue;
+         request["AddGTPData"] = input;
+
+         client.sendMessage("move3d", wrt.write(request));
+         ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
+      }
+
+      for (unsigned int i = 0; i< goal->req.points.size(); i++)
+      {
+
+         Json::Value request(Json::objectValue);
+         Json::Value input(Json::objectValue);
+
+         input["x"] = goal->req.points.at(i).value.x;
+         input["y"] = goal->req.points.at(i).value.y;
+         input["z"] = goal->req.points.at(i).value.z;
+
+         input["key"] = goal->req.points.at(i).pointKey;
+         request["AddGTPPoint"] = input;
+
+         client.sendMessage("move3d", wrt.write(request));
+         ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
+      }
+
+      Json::Value request(Json::objectValue);
+      Json::Value input(Json::objectValue);
+
+      input["computeMotionPlan"] = true;
+      input["previousTaskAlternativeId"] = (int)goal->req.predecessorId.alternativeId;
+      input["previousTaskId"] = (int)goal->req.predecessorId.actionId;
+      input["type"] = goal->req.actionName;
+      request["PlanGTPTask"] = input;
+
+      client.sendMessage("move3d", wrt.write(request));
+
+      std::string str = client.getBlockingMessage().second;
+      //ROS_INFO("%s",str.c_str());
+
+      Json::Value root,nullval,tmpVal;
+      Json::Reader reader;
+
+      bool parsedSuccess = reader.parse(str, root, false);
+      if(!parsedSuccess || root.size() <= 0)
+      {
+          ROS_INFO("Failed to parse JSON");
+          return false;
+      }
+
+      ROS_INFO("%s", root.toStyledString().c_str());
+
+      tmpVal = root.get("PlanGTPTask", nullval );
+
+      if (tmpVal == nullval)
+      {
+         ROS_INFO("Failed to find PlanGTPTask");
+         return false;
+      }
+
+
+      std::string report = "";// = tmpVal.get("returnReport", "Null" ).asString();
+      if (tmpVal.isMember("planningInformation") && tmpVal["planningInformation"].isMember("returnReport"))
+          report = tmpVal["planningInformation"]["returnReport"].asString();
+
+
+      bool ok = false;
+      if (report == "OK")
+      {
+         ROS_INFO("Computation successfull");
+         taskId = tmpVal.get("taskId", "Null" ).asInt();
+         altId = tmpVal.get("taskAlternativeId", "Null" ).asInt();
+         ok = true;
+      }
+      else
+      {
+         ROS_INFO("Failed to compute, reason: %s", report.c_str());
+         ok = false;
+      }
+
+      return ok;
+  }
+
+
+  void details(const int taskId, const int altId, gtp_ros_msg::ReqAns& ans)
+  {
+      Json::FastWriter wrt;
+      bool ok = true;
+      Json::Value request(Json::objectValue);
+      Json::Value input(Json::objectValue);
+
+      input["taskId"] = taskId;
+      input["alternativeId"] = altId;
+      request["GetGTPDetails"] = input;
+
+      client.sendMessage("move3d", wrt.write(request));
+      std::string res = client.getBlockingMessage().second;
+      //ROS_INFO("planner answer: %s", res.c_str());
+
+
+      Json::Value root, answer, nullval;
+      Json::Reader reader;
+
+      reader.parse(res, root, false);
+      answer = root.get("GetGTPDetails", nullval );
+
+      if (answer == nullval)
+      {
+        ROS_INFO("no GetGTPDetails");
+        ok = false;
+      }
+
+      if (ok && answer.get("status", "NULL").asString() != "OK")
+      {
+          ROS_INFO("get details failed");
+          ok = false;
+      }
+
+      if (ok)
+      {
+          const Json::Value& subTrajs = answer["subTrajs"];
+          ans.actionName = answer["taskName"].asString();
+          ans.subTrajs.clear();
+          for (Json::ValueConstIterator it = subTrajs.begin(); it != subTrajs.end(); ++it)
+          {
+              const Json::Value& subTraj = *it;
+              // rest as before
+              gtp_ros_msg::SubTraj subMsg;
+              subMsg.agent = subTraj["agent"].asString();
+              subMsg.armId = subTraj["armId"].asInt();
+              subMsg.subTrajId = subTraj["subTrajId"].asInt();
+              subMsg.subTrajName = subTraj["subTrajName"].asString();
+              subMsg.subTrajType = subTraj["subTrajType"].asString();
+              ans.subTrajs.push_back(subMsg);
+          }
+      }
+
+      ans.identifier.actionId = taskId;
+      ans.identifier.alternativeId = altId;
+      ans.success = ok;
+
+      return;
+  }
+
+  void updateScene()
+  {
+      std::clock_t begin = std::clock();
+     int t;
+     nh_.getParam("/waitUpdate", t);
+//       ROS_INFO("t = %d", t);
+     updateObjectList = true;
+     while (updateObjectList)
+     {
+       usleep(t);
+       ROS_INFO("Waiting for objects updates");
+     }
+     updateRobotList = true;
+     while (updateRobotList)
+     {
+       usleep(t);
+       ROS_INFO("Waiting for robots updates");
+     }
+     updateHumanList = true;
+     while (updateHumanList)
+     {
+       usleep(t);
+       ROS_INFO("Waiting for humans updates");
+     }
+     std::clock_t endf = std::clock();
+
+     ROS_INFO("Done updating in %f", (double)(endf-begin)/CLOCKS_PER_SEC);
+  }
+
   void executeCB(const gtp_ros_msg::requestGoalConstPtr &goal)
   {
     // helper variables
     ros::Rate r(1);
-    bool success = true;
+//    bool success = true;
     ROS_INFO("%s: Computing the request", action_name_.c_str());
-    
-
-    //int f = str.find("taskAlternativeId");
-    //std::cout << str.c_str()[f] << std::endl; //163
-    //int vir = str.rfind(",");
-    //std::cout << vir << std::endl; //164
-    
-
-
-        
-        
-    //std::string altIdStr = str.substr(str.find("taskAlternativeId") + 19, str.rfind(",") - str.find("taskAlternativeId") - 19);
-    //std::string IdStr = str.substr(str.find("taskId") + 8, str.rfind("}") - 1 - str.find("taskId") - 8);
     
     Json::FastWriter wrt;
     if (goal->req.requestType == "planning")
     {
-        client.sendMessage("move3d", "{\"ClearGTPInputs\":null}");
-        std::cout << client.getBlockingMessage().second << std::endl;
-        
-        
-        //_result = wrt.write(res);
+        int taskId, altId;
+        bool ok = plan(goal,taskId,altId);
+        result_.ans.success = ok;
+        if (ok)
+        {
+            result_.ans.identifier.actionId = taskId;
+            result_.ans.identifier.alternativeId = altId;
+        }
 
-        
-        for (unsigned int i = 0; i< goal->req.involvedAgents.size(); i++)
-        {
-           Json::Value request(Json::objectValue);
-           Json::Value input(Json::objectValue);
-           
-           input["key"] = goal->req.involvedAgents.at(i).actionKey;
-           input["value"] = goal->req.involvedAgents.at(i).agentName;
-           request["AddGTPAgent"] = input;
-           
-           client.sendMessage("move3d", wrt.write(request));
-           ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
-        }
-        
-        for (unsigned int i = 0; i< goal->req.involvedObjects.size(); i++)
-        {
-           Json::Value request(Json::objectValue);
-           Json::Value input(Json::objectValue);
-           
-           input["key"] = goal->req.involvedObjects.at(i).actionKey;
-           input["value"] = goal->req.involvedObjects.at(i).objectName;
-           request["AddGTPObject"] = input;
-           
-           client.sendMessage("move3d", wrt.write(request));
-           ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
-        }
-        
-        for (unsigned int i = 0; i< goal->req.data.size(); i++)
-        {
-           Json::Value request(Json::objectValue);
-           Json::Value input(Json::objectValue);
-           
-           input["key"] = goal->req.data.at(i).dataKey;
-           input["value"] = goal->req.data.at(i).dataValue;
-           request["AddGTPData"] = input;
-           
-           client.sendMessage("move3d", wrt.write(request));
-           ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
-        }
-        
-        for (unsigned int i = 0; i< goal->req.points.size(); i++)
-        {
-        
-           Json::Value request(Json::objectValue);
-           Json::Value input(Json::objectValue);
-           
-           input["x"] = goal->req.points.at(i).value.x;
-           input["y"] = goal->req.points.at(i).value.y;
-           input["z"] = goal->req.points.at(i).value.z;
-           
-           input["key"] = goal->req.points.at(i).pointKey;
-           request["AddGTPPoint"] = input;
-           
-           client.sendMessage("move3d", wrt.write(request));
-           ROS_INFO("planner answer: %s", client.getBlockingMessage().second.c_str());
-        }
-        
-        Json::Value request(Json::objectValue);
-        Json::Value input(Json::objectValue);
-        
-        input["computeMotionPlan"] = true;
-        input["previousTaskAlternativeId"] = (int)goal->req.predecessorId.alternativeId;
-        input["previousTaskId"] = (int)goal->req.predecessorId.actionId;
-        input["type"] = goal->req.actionName;
-        request["PlanGTPTask"] = input;
-        
-        client.sendMessage("move3d", wrt.write(request));
-        
-        std::string str = client.getBlockingMessage().second;
-        //ROS_INFO("%s",str.c_str());
-        
-        Json::Value root,nullval,tmpVal;
-        Json::Reader reader;
-        
-        bool parsedSuccess = reader.parse(str, root, false);
-        if(!parsedSuccess || root.size() <= 0)
-        {
-            ROS_INFO("Failed to parse JSON");
-            result_.ans.success = false;
-            as_.setSucceeded(result_);
-            return;
-        }
-        
-        ROS_INFO("%s", root.toStyledString().c_str());
-        
-        tmpVal = root.get("PlanGTPTask", nullval );
-        
-        if (tmpVal == nullval)
-        {
-           ROS_INFO("Failed to find PlanGTPTask");
-           result_.ans.success = false;
-           as_.setSucceeded(result_);
-           return;
-        }
-        
-
-        std::string report = "";// = tmpVal.get("returnReport", "Null" ).asString();
-        if (tmpVal.isMember("planningInformation") && tmpVal["planningInformation"].isMember("returnReport"))
-            report = tmpVal["planningInformation"]["returnReport"].asString();
-            
-        
-        if (report == "OK")
-           result_.ans.success = true;
-        else
-        {
-           ROS_INFO("Failed to compute, reason: %s", report.c_str());
-           result_.ans.success = false;
-           as_.setSucceeded(result_);
-           return;
-        }
-          
-        result_.ans.identifier.actionId = tmpVal.get("taskId", "Null" ).asInt();
-        result_.ans.identifier.alternativeId = tmpVal.get("taskAlternativeId", "Null" ).asInt();
-        
-        
-        ROS_INFO("planner answer: %s", str.c_str());
+//        ROS_INFO("planner answer: %s", str.c_str());
         as_.setSucceeded(result_);
     }
     else if (goal->req.requestType == "details")
     {
-        Json::Value request(Json::objectValue);
-        Json::Value input(Json::objectValue);
-        
-        input["taskId"] = (int)goal->req.loadAction.actionId;
-        input["alternativeId"] = (int)goal->req.loadAction.alternativeId;
-        request["GetGTPDetails"] = input;
-        
-        client.sendMessage("move3d", wrt.write(request));
-        std::string res = client.getBlockingMessage().second;
-        //ROS_INFO("planner answer: %s", res.c_str());
-        
-        
-        Json::Value root, answer, nullval;
-        Json::Reader reader;
-  
-        reader.parse(res, root, false);
-        answer = root.get("GetGTPDetails", nullval );
-        
-        if (answer == nullval)
-        {
-          ROS_INFO("no GetGTPDetails");
-          result_.ans.success = false;
-          as_.setSucceeded(result_);
-          return;
-        }
-        
-        if (answer.get("status", "NULL").asString() != "OK")
-        {
-          ROS_INFO("get details failed");
-          result_.ans.success = false;
-          as_.setSucceeded(result_);
-          return;
-        }
-        
-        const Json::Value& subTrajs = answer["subTrajs"];
-        result_.ans.subTrajs.clear();
-        for (Json::ValueConstIterator it = subTrajs.begin(); it != subTrajs.end(); ++it)
-        {
-            const Json::Value& subTraj = *it;
-            // rest as before
-            gtp_ros_msg::SubTraj subMsg;
-            subMsg.agent = subTraj["agent"].asString();
-            subMsg.armId = subTraj["armId"].asInt();
-            subMsg.subTrajId = subTraj["subTrajId"].asInt();
-            subMsg.subTrajName = subTraj["subTrajName"].asString();
-            subMsg.subTrajType = subTraj["subTrajType"].asString();
-            result_.ans.subTrajs.push_back(subMsg);
-        }
-        result_.ans.success = true;
+        gtp_ros_msg::ReqAns ans;
+        details((int)goal->req.loadAction.actionId, (int)goal->req.loadAction.alternativeId, ans);
+        result_.ans = ans;
         as_.setSucceeded(result_);
-        
     }
     else if (goal->req.requestType == "load")
     {
@@ -381,36 +423,30 @@ public:
     }
     else if (goal->req.requestType == "update")
     {
-        std::clock_t begin = std::clock();
-
-
-       int t;
-       nh_.getParam("/waitUpdate", t);
-//       ROS_INFO("t = %d", t);
-       updateObjectList = true;
-       while (updateObjectList)
-       {
-         usleep(t);
-         ROS_INFO("Waiting for objects updates");
-       }
-       updateRobotList = true;
-       while (updateRobotList)
-       {
-         usleep(t);
-         ROS_INFO("Waiting for robots updates");
-       }
-       updateHumanList = true;
-       while (updateHumanList)
-       {
-         usleep(t);
-         ROS_INFO("Waiting for humans updates");
-       }
+       updateScene();
        result_.ans.success = true;
        as_.setSucceeded(result_);
+    }
+    else if (goal->req.requestType == "updateAndPlan")
+    {
+        updateScene();
 
-       std::clock_t endf = std::clock();
+        int taskId, altId;
+        bool ok = plan(goal,taskId,altId);
 
-       ROS_INFO("Done updating in %f", (double)(endf-begin)/CLOCKS_PER_SEC);
+        if (ok)
+        {
+            gtp_ros_msg::ReqAns ans;
+            details(taskId, altId, ans);
+
+            result_.ans = ans;
+        }
+        else
+        {
+            result_.ans.success = false;
+        }
+        as_.setSucceeded(result_);
+
     }
     else if (goal->req.requestType == "addAttachemnt")
     {

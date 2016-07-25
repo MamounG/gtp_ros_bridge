@@ -1,0 +1,35 @@
+{
+    "requestType":"updateAndPlan",
+    "actionType":"pick",
+    "input":
+    {
+        "agents":
+        {
+            "agent1":
+            {
+                "key":"mainAgent",
+                "value":"PR2_ROBOT"
+            }
+        },
+        "objects":
+        {
+            "object1":
+            {
+                "key":"mainObject",
+                "value":"GREY_TAPE"
+            }
+        },
+        "datas":
+        {
+            "data1":
+            {
+                "key":"hand",
+                "value":"right"
+            }
+        }
+    },
+    "previousId":-1,
+    "previousAltId":-1
+    
+}
+
