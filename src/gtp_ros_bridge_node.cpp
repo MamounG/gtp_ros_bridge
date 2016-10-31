@@ -76,6 +76,28 @@ public:
         jointCorrespondances["l_wrist_flex_link"] = "left-Arm6";
         jointCorrespondances["l_wrist_roll_link"] = "left-Arm7";
         jointCorrespondances["l_gripper_link"] = "fingerJointGripper_1";
+
+
+        jointCorrespondances["HeadYaw"] = "HeadYaw";
+        jointCorrespondances["HeadPitch"] = "HeadPitch";
+        jointCorrespondances["LShoulderPitch"] = "LShoulderPitch";
+        jointCorrespondances["LShoulderRoll"] = "LShoulderRoll";
+        jointCorrespondances["LElbowYaw"] = "LElbowYaw";
+        jointCorrespondances["LElbowRoll"] = "LElbowRoll";
+        jointCorrespondances["LWristYaw"] = "LWristYaw";
+        jointCorrespondances["LHand"] = "LHand";
+        jointCorrespondances["HipRoll"] = "HipRoll";
+        jointCorrespondances["HipPitch"] = "HipPitch";
+        jointCorrespondances["KneePitch"] = "KneePitch";
+        jointCorrespondances["RShoulderPitch"] = "RShoulderPitch";
+        jointCorrespondances["RShoulderRoll"] = "RShoulderRoll";
+        jointCorrespondances["RElbowYaw"] = "RElbowYaw";
+        jointCorrespondances["RElbowRoll"] = "RElbowRoll";
+        jointCorrespondances["RWristYaw"] = "RWristYaw";
+        jointCorrespondances["RHand"] = "RHand";
+        jointCorrespondances["WheelFL"] = "WheelFL";
+        jointCorrespondances["WheelFR"] = "WheelFR";
+        jointCorrespondances["WheelB"] = "WheelB";
         
   
         as_.start();
@@ -349,17 +371,7 @@ public:
         reader.parse(res, root, false);
         
         gtp_ros_msg::GTPTraj t;
-        for (unsigned int i = 0; i < root["GetGTPTraj"]["confs"].size(); i++)
-        {
-            trajectory_msgs::JointTrajectoryPoint Jtpt;
-            for (unsigned int j = 6; j < root["GetGTPTraj"]["confs"][i].size(); j++)
-            {
-               Jtpt.positions.push_back(root["GetGTPTraj"]["confs"][i][j].asDouble());
-               Jtpt.velocities.push_back(0);
-               Jtpt.accelerations.push_back(0);
-            }
-            t.traj.points.push_back(Jtpt);
-        }
+
         
         
         t.name = "traj";
@@ -369,6 +381,19 @@ public:
         
         if (root["GetGTPTraj"]["agent"] == "PR2_ROBOT")
         {
+            for (unsigned int i = 0; i < root["GetGTPTraj"]["confs"].size(); i++)
+            {
+                trajectory_msgs::JointTrajectoryPoint Jtpt;
+                for (unsigned int j = 6; j < root["GetGTPTraj"]["confs"][i].size(); j++)
+                {
+                   Jtpt.positions.push_back(root["GetGTPTraj"]["confs"][i][j].asDouble());
+                   Jtpt.velocities.push_back(0);
+                   Jtpt.accelerations.push_back(0);
+                }
+                t.traj.points.push_back(Jtpt);
+            }
+
+
             t.traj.joint_names.push_back("navX");
             t.traj.joint_names.push_back("navY");
             t.traj.joint_names.push_back("dummyZ");
@@ -403,6 +428,18 @@ public:
         }
         else if (root["GetGTPTraj"]["agent"] == "KUKA_ROBOT")
         {
+            for (unsigned int i = 0; i < root["GetGTPTraj"]["confs"].size(); i++)
+            {
+                trajectory_msgs::JointTrajectoryPoint Jtpt;
+                for (unsigned int j = 6; j < root["GetGTPTraj"]["confs"][i].size(); j++)
+                {
+                   Jtpt.positions.push_back(root["GetGTPTraj"]["confs"][i][j].asDouble());
+                   Jtpt.velocities.push_back(0);
+                   Jtpt.accelerations.push_back(0);
+                }
+                t.traj.points.push_back(Jtpt);
+            }
+
             t.traj.joint_names.push_back("arm0");
             t.traj.joint_names.push_back("arm1");
             t.traj.joint_names.push_back("arm2");
@@ -411,7 +448,66 @@ public:
             t.traj.joint_names.push_back("arm5");
             t.traj.joint_names.push_back("arm6");
         }    
-        
+        else if (root["GetGTPTraj"]["agent"] == "PEPPER_ROBOT1")
+        {
+
+            std::vector<int> dofPositions;
+            dofPositions.push_back(15);
+            dofPositions.push_back(16);
+            dofPositions.push_back(17);
+            dofPositions.push_back(18);
+            dofPositions.push_back(19);
+            dofPositions.push_back(20);
+            dofPositions.push_back(21);
+            dofPositions.push_back(34);
+            dofPositions.push_back(14);
+            dofPositions.push_back(13);
+            dofPositions.push_back(12);
+            dofPositions.push_back(37);
+            dofPositions.push_back(38);
+            dofPositions.push_back(39);
+            dofPositions.push_back(40);
+            dofPositions.push_back(41);
+            dofPositions.push_back(54);
+            dofPositions.push_back(57);
+            dofPositions.push_back(58);
+            dofPositions.push_back(59);
+
+            for (unsigned int i = 0; i < root["GetGTPTraj"]["confs"].size(); i++)
+            {
+                trajectory_msgs::JointTrajectoryPoint Jtpt;
+
+                for (unsigned int j = 0; j < dofPositions.size(); j++)
+                {
+                   Jtpt.positions.push_back(root["GetGTPTraj"]["confs"][i][dofPositions[j]].asDouble());
+                   Jtpt.velocities.push_back(0);
+                   Jtpt.accelerations.push_back(0);
+                }
+                t.traj.points.push_back(Jtpt);
+            }
+
+
+            t.traj.joint_names.push_back("HeadYaw");
+            t.traj.joint_names.push_back("HeadPitch");
+            t.traj.joint_names.push_back("LShoulderPitch");
+            t.traj.joint_names.push_back("LShoulderRoll");
+            t.traj.joint_names.push_back("LElbowYaw");
+            t.traj.joint_names.push_back("LElbowRoll");
+            t.traj.joint_names.push_back("LWristYaw");
+            t.traj.joint_names.push_back("LHand");
+            t.traj.joint_names.push_back("HipRoll");
+            t.traj.joint_names.push_back("HipPitch");
+            t.traj.joint_names.push_back("KneePitch");
+            t.traj.joint_names.push_back("RShoulderPitch");
+            t.traj.joint_names.push_back("RShoulderRoll");
+            t.traj.joint_names.push_back("RElbowYaw");
+            t.traj.joint_names.push_back("RElbowRoll");
+            t.traj.joint_names.push_back("RWristYaw");
+            t.traj.joint_names.push_back("RHand");
+            t.traj.joint_names.push_back("WheelFL");
+            t.traj.joint_names.push_back("WheelFR");
+            t.traj.joint_names.push_back("WheelB");
+        }
         
         
         //t.traj.points.
